@@ -33,32 +33,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent } from "@/components/ui/card"
 import { useDebounce } from "@/hooks/use-debounce"
 import { createClient } from '@supabase/supabase-js';
-// @ts-ignore
-import * as pdfjsLib from 'pdfjs-dist/build/pdf';
-// @ts-ignore
-import { GlobalWorkerOptions, version as pdfjsVersion } from 'pdfjs-dist/build/pdf';
-
-GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsVersion}/pdf.worker.min.js`;
-
-// Utility: Convert PDF file to array of image Blobs (one per page)
-async function pdfToImages(file: File): Promise<Blob[]> {
-  const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  const images: Blob[] = [];
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const viewport = page.getViewport({ scale: 2 });
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    await page.render({ canvasContext: context, viewport }).promise;
-    // Convert canvas to Blob (PNG)
-    const blob: Blob = await new Promise(resolve => canvas.toBlob(resolve as any, 'image/png'));
-    images.push(blob);
-  }
-  return images;
-}
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -68,19 +42,7 @@ const supabase = createClient(
 async function uploadFilesDirect(files: File[]): Promise<string[]> {
   const urls: string[] = [];
   for (const file of files) {
-    // If PDF, convert to images and upload each image
-    if (file.type === 'application/pdf') {
-      const imageBlobs = await pdfToImages(file);
-      for (const blob of imageBlobs) {
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.png`;
-        const { data, error } = await supabase.storage
-          .from('submission-files')
-          .upload(fileName, blob, { cacheControl: '3600', upsert: false });
-        if (error) throw new Error(error.message);
-        const { data: urlData } = supabase.storage.from('submission-files').getPublicUrl(fileName);
-        urls.push(urlData.publicUrl);
-      }
-    } else if (file.type.startsWith('image/')) {
+    if (file.type.startsWith('image/')) {
       // Upload image directly
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
@@ -91,7 +53,7 @@ async function uploadFilesDirect(files: File[]): Promise<string[]> {
       const { data: urlData } = supabase.storage.from('submission-files').getPublicUrl(fileName);
       urls.push(urlData.publicUrl);
     }
-    // Ignore non-image, non-PDF files
+    // Ignore non-image files
   }
   return urls;
 }
@@ -938,7 +900,7 @@ export function CustomQuoteForm() {
                     className="hidden"
                     onChange={handleFileChange}
                     multiple
-                    accept="image/*,.pdf"
+                    accept="image/*"
                     disabled={isUploadingFiles}
                   />
                   <label htmlFor="file-upload" className={`flex flex-col items-center justify-center ${isUploadingFiles ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>

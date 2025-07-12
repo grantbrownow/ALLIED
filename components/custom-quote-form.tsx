@@ -33,10 +33,12 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent } from "@/components/ui/card"
 import { useDebounce } from "@/hooks/use-debounce"
 import { createClient } from '@supabase/supabase-js';
+// @ts-ignore
 import * as pdfjsLib from 'pdfjs-dist/build/pdf';
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.entry';
+// @ts-ignore
+import { GlobalWorkerOptions, version as pdfjsVersion } from 'pdfjs-dist/build/pdf';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsVersion}/pdf.worker.min.js`;
 
 // Utility: Convert PDF file to array of image Blobs (one per page)
 async function pdfToImages(file: File): Promise<Blob[]> {

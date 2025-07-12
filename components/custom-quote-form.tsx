@@ -32,6 +32,27 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent } from "@/components/ui/card"
 import { useDebounce } from "@/hooks/use-debounce"
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+async function uploadFilesDirect(files: File[]) {
+  const urls: string[] = [];
+  for (const file of files) {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+    const { data, error } = await supabase.storage
+      .from('submission-files')
+      .upload(fileName, file, { cacheControl: '3600', upsert: false });
+    if (error) throw new Error(error.message);
+    const { data: urlData } = supabase.storage.from('submission-files').getPublicUrl(fileName);
+    urls.push(urlData.publicUrl);
+  }
+  return urls;
+}
 
 const formSchema = z
   .object({
@@ -265,32 +286,7 @@ export function CustomQuoteForm() {
     try {
       if (files.length > 0) {
         setIsUploadingFiles(true);
-
-        const uploadFormData = new FormData();
-        files.forEach(file => uploadFormData.append('files', file));
-
-        const uploadResponse = await fetch("/api/upload", {
-          method: "POST",
-          body: uploadFormData,
-        });
-
-        let uploadData;
-        try {
-          uploadData = await uploadResponse.clone().json();
-        } catch (e) {
-          const text = await uploadResponse.text();
-          alert("File upload failed: " + text);
-          setIsUploadingFiles(false);
-          return;
-        }
-
-        if (uploadData.success) {
-          fileUrls = uploadData.urls;
-        } else {
-          setIsUploadingFiles(false);
-          alert("File upload failed: " + uploadData.error);
-          return; // Stop submission if upload fails
-        }
+        fileUrls = await uploadFilesDirect(files);
         setIsUploadingFiles(false);
       }
 
@@ -316,8 +312,9 @@ export function CustomQuoteForm() {
       }
     } catch (error) {
       setIsUploadingFiles(false);
-      alert("Unexpected error: " + (error as Error).message);
+      alert("File upload failed: " + (error as Error).message);
       console.error("Error saving to database:", error);
+      return;
     }
   }
 

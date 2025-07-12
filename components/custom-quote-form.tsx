@@ -274,7 +274,15 @@ export function CustomQuoteForm() {
           body: uploadFormData,
         });
 
-        const uploadData = await uploadResponse.json();
+        let uploadData;
+        try {
+          uploadData = await uploadResponse.json();
+        } catch (e) {
+          const text = await uploadResponse.text();
+          alert("File upload failed: " + text);
+          setIsUploadingFiles(false);
+          return;
+        }
 
         if (uploadData.success) {
           fileUrls = uploadData.urls;

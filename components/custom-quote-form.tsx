@@ -276,7 +276,7 @@ export function CustomQuoteForm() {
 
         let uploadData;
         try {
-          uploadData = await uploadResponse.json();
+          uploadData = await uploadResponse.clone().json();
         } catch (e) {
           const text = await uploadResponse.text();
           alert("File upload failed: " + text);

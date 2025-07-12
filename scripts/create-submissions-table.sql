@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS submissions (
   last_name TEXT,
   company_name TEXT,
   phone_number TEXT,
-  uploaded_files JSONB DEFAULT '[]'::jsonb,
+  uploaded_files TEXT[] DEFAULT '{}',
   ai_estimate TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

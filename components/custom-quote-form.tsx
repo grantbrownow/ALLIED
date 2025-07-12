@@ -111,6 +111,7 @@ export function CustomQuoteForm() {
   const [aiEstimate, setAiEstimate] = useState<AIEstimate | null>(null)
   const [isLoadingEstimate, setIsLoadingEstimate] = useState(false)
   const [isSavedToDatabase, setIsSavedToDatabase] = useState(false)
+  const [isUploadingFiles, setIsUploadingFiles] = useState(false)
 
   // Autocomplete state
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([])
@@ -224,6 +225,7 @@ export function CustomQuoteForm() {
     setCurrentPage(5)
 
     try {
+      // For AI estimate, we'll just send file names since the AI doesn't need the actual files
       const response = await fetch("/api/estimate", {
         method: "POST",
         headers: {
@@ -260,6 +262,32 @@ export function CustomQuoteForm() {
     if (isSavedToDatabase) return
 
     try {
+      // First, upload files if any
+      let fileUrls: string[] = []
+      if (files.length > 0) {
+        setIsUploadingFiles(true)
+        const uploadFormData = new FormData()
+        files.forEach(file => {
+          uploadFormData.append('files', file)
+        })
+
+        const uploadResponse = await fetch("/api/upload", {
+          method: "POST",
+          body: uploadFormData,
+        })
+
+        const uploadData = await uploadResponse.json()
+        
+        if (uploadData.success) {
+          fileUrls = uploadData.urls
+        } else {
+          console.error("Failed to upload files:", uploadData.error)
+          // Continue with submission even if file upload fails
+        }
+        setIsUploadingFiles(false)
+      }
+
+      // Then save the submission with file URLs
       const response = await fetch("/api/submissions", {
         method: "POST",
         headers: {
@@ -267,7 +295,7 @@ export function CustomQuoteForm() {
         },
         body: JSON.stringify({
           ...formData,
-          files: files.map((f) => f.name),
+          files: fileUrls,
           aiEstimate: estimate,
           wantsCashOffer: formData.wantsCashOffer,
         }),
@@ -865,10 +893,13 @@ export function CustomQuoteForm() {
                     onChange={handleFileChange}
                     multiple
                     accept="image/*,.pdf"
+                    disabled={isUploadingFiles}
                   />
-                  <label htmlFor="file-upload" className="flex flex-col items-center justify-center cursor-pointer">
+                  <label htmlFor="file-upload" className={`flex flex-col items-center justify-center ${isUploadingFiles ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
                     <Upload className="h-8 w-8 text-primary/60 mb-2" />
-                    <span className="text-sm font-medium text-gray-700">Click to choose a file or drag here</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      {isUploadingFiles ? 'Uploading files...' : 'Click to choose a file or drag here'}
+                    </span>
                   </label>
                 </div>
 

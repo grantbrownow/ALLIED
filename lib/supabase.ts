@@ -53,7 +53,7 @@ export function transformSupabaseToTally(submission: SupabaseSubmission) {
     "Project Description": submission.project_description || "",
     "First Name": submission.first_name || "",
     "Last Name": submission.last_name || "",
-    "Upload Photos or Plans": submission.uploaded_files?.join(", ") || "",
+    "Upload Photos or Plans": submission.uploaded_files && submission.uploaded_files.length > 0 ? submission.uploaded_files.join(", ") : "",
     "Company Name (optional)": submission.company_name || "",
     "Phone Number": submission.phone_number || "",
     "AI Estimate": submission.ai_estimate || "",

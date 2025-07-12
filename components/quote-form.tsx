@@ -70,15 +70,73 @@ export function QuoteForm() {
     },
   })
 
-  function onSubmit(data: FormValues) {
+  async function onSubmit(data: FormValues) {
     console.log("Form submitted:", data)
-    // Here you would typically send the data to your backend/CRM
-    alert("Thank you for your submission! We will contact you shortly.")
-    form.reset()
-    setStep(1)
-    setFiles([])
-    setStepValidated({})
-    setSubmitAttempted(false)
+    
+    try {
+      // First, upload files if any
+      let fileUrls: string[] = []
+      if (files.length > 0) {
+        const uploadFormData = new FormData()
+        files.forEach(file => {
+          uploadFormData.append('files', file)
+        })
+
+        const uploadResponse = await fetch("/api/upload", {
+          method: "POST",
+          body: uploadFormData,
+        })
+
+        const uploadData = await uploadResponse.json()
+        
+        if (uploadData.success) {
+          fileUrls = uploadData.urls
+        } else {
+          console.error("Failed to upload files:", uploadData.error)
+        }
+      }
+
+      // Then save the submission
+      const response = await fetch("/api/submissions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...data,
+          files: fileUrls,
+          // Map the form fields to match the expected format
+          email: data.email,
+          timeframe: data.timeframe,
+          demoType: data.demoType,
+          streetAddress: data.street,
+          city: data.city,
+          state: "FL", // Default to Florida
+          zipCode: data.zipcode,
+          projectDescription: data.details,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          companyName: data.companyName,
+          phone: data.phone,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        alert("Thank you for your submission! We will contact you shortly.")
+        form.reset()
+        setStep(1)
+        setFiles([])
+        setStepValidated({})
+        setSubmitAttempted(false)
+      } else {
+        alert("There was an error submitting your form. Please try again.")
+      }
+    } catch (error) {
+      console.error("Error submitting form:", error)
+      alert("There was an error submitting your form. Please try again.")
+    }
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

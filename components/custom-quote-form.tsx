@@ -42,8 +42,8 @@ const supabase = createClient(
 async function uploadFilesDirect(files: File[]): Promise<string[]> {
   const urls: string[] = [];
   for (const file of files) {
-    if (file.type.startsWith('image/')) {
-      // Upload image directly
+    if (file.type.startsWith('image/') || file.type === 'application/pdf') {
+      // Upload image or PDF directly
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
       const { data, error } = await supabase.storage
@@ -53,7 +53,7 @@ async function uploadFilesDirect(files: File[]): Promise<string[]> {
       const { data: urlData } = supabase.storage.from('submission-files').getPublicUrl(fileName);
       urls.push(urlData.publicUrl);
     }
-    // Ignore non-image files
+    // Ignore other file types
   }
   return urls;
 }
@@ -900,7 +900,7 @@ export function CustomQuoteForm() {
                     className="hidden"
                     onChange={handleFileChange}
                     multiple
-                    accept="image/*"
+                    accept="image/*,.pdf"
                     disabled={isUploadingFiles}
                   />
                   <label htmlFor="file-upload" className={`flex flex-col items-center justify-center ${isUploadingFiles ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>

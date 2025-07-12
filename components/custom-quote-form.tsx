@@ -259,58 +259,57 @@ export function CustomQuoteForm() {
   }
 
   async function saveToDatabase(formData: FormValues, estimate: string) {
-    if (isSavedToDatabase) return
+    if (isSavedToDatabase) return;
 
+    let fileUrls: string[] = [];
     try {
-      // First, upload files if any
-      let fileUrls: string[] = []
       if (files.length > 0) {
-        setIsUploadingFiles(true)
-        const uploadFormData = new FormData()
-        files.forEach(file => {
-          uploadFormData.append('files', file)
-        })
+        setIsUploadingFiles(true);
+
+        const uploadFormData = new FormData();
+        files.forEach(file => uploadFormData.append('files', file));
 
         const uploadResponse = await fetch("/api/upload", {
           method: "POST",
           body: uploadFormData,
-        })
+        });
 
-        const uploadData = await uploadResponse.json()
-        
+        const uploadData = await uploadResponse.json();
+
         if (uploadData.success) {
-          fileUrls = uploadData.urls
+          fileUrls = uploadData.urls;
         } else {
-          console.error("Failed to upload files:", uploadData.error)
-          // Continue with submission even if file upload fails
+          setIsUploadingFiles(false);
+          alert("File upload failed: " + uploadData.error);
+          return; // Stop submission if upload fails
         }
-        setIsUploadingFiles(false)
+        setIsUploadingFiles(false);
       }
 
-      // Then save the submission with file URLs
+      // Now save the submission with file URLs
       const response = await fetch("/api/submissions", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
           files: fileUrls,
           aiEstimate: estimate,
           wantsCashOffer: formData.wantsCashOffer,
         }),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (data.success) {
-        setIsSavedToDatabase(true)
-        console.log("Submission saved to database:", data.submission.id)
+        setIsSavedToDatabase(true);
+        console.log("Submission saved to database:", data.submission.id);
       } else {
-        console.error("Failed to save to database:", data.error)
+        alert("Failed to save submission: " + data.error);
       }
     } catch (error) {
-      console.error("Error saving to database:", error)
+      setIsUploadingFiles(false);
+      alert("Unexpected error: " + (error as Error).message);
+      console.error("Error saving to database:", error);
     }
   }
 
@@ -900,6 +899,7 @@ export function CustomQuoteForm() {
                     <span className="text-sm font-medium text-gray-700">
                       {isUploadingFiles ? 'Uploading files...' : 'Click to choose a file or drag here'}
                     </span>
+                    {isUploadingFiles && <div className="mt-2 text-xs text-blue-600">Uploading, please wait...</div>}
                   </label>
                 </div>
 
